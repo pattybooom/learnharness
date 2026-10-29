@@ -53,8 +53,11 @@ export function standardFontsDir(): string {
 }
 
 async function openDocument(filePath: string) {
+	return openDocumentData(new Uint8Array(await fs.readFile(filePath)));
+}
+
+async function openDocumentData(data: Uint8Array) {
 	const pdfjs = await loadPdfjs();
-	const data = new Uint8Array(await fs.readFile(filePath));
 	// The legacy build in plain node runs on a main-thread fake worker (no
 	// workerSrc needed); teardown is the loading task's destroy().
 	// verbosity 0 = errors only — scanned PDFs (JBIG2 XObjects) otherwise
@@ -161,6 +164,16 @@ export function parsePageSpec(spec: string, total: number): number[] {
 /** pdf_extract: text of the requested pages, `--- Page N ---` headed. */
 export async function pdfExtract(filePath: string, pageSpec: string): Promise<string> {
 	const { doc } = await openDocument(filePath);
+	return extractDocumentText(doc, pageSpec);
+}
+
+/** Extract text directly from an uploaded PDF without writing it to disk. */
+export async function pdfExtractBytes(data: Uint8Array, pageSpec = "all"): Promise<string> {
+	const { doc } = await openDocumentData(data);
+	return extractDocumentText(doc, pageSpec);
+}
+
+async function extractDocumentText(doc: Awaited<ReturnType<typeof openDocument>>["doc"], pageSpec: string): Promise<string> {
 	const pages = parsePageSpec(pageSpec, doc.numPages);
 	if (pages.length === 0) return "No pages selected — page spec matched nothing.";
 	const out: string[] = [];

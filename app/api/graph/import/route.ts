@@ -14,6 +14,7 @@
  * /api/graph/status, as with session runs.
  */
 import { extraction, NotesImportError } from "@/src/server";
+import { pdfExtractBytes } from "@/src/agent/subagents/pdf-ops";
 import {
 	ModelsNotConfiguredError,
 	PROVIDER_KEY_MISSING_CODE,
@@ -55,7 +56,13 @@ export async function POST(request: Request) {
 			if (!next) return;
 			const { file, requestIndex } = next;
 			try {
-				const text = await file.text();
+				const isPdf = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
+				const text = isPdf
+					? await pdfExtractBytes(new Uint8Array(await file.arrayBuffer()))
+					: await file.text();
+				if (isPdf && !text.replace(/--- Page \d+ ---/g, "").trim()) {
+					throw new Error("No selectable text was found in this PDF. Scanned PDFs need OCR before they can be imported as notes.");
+				}
 				const stats = await extraction.importNotes({ filePath: file.name, text });
 				results.push({ filePath: file.name, requestIndex, outcome: "completed", ok: true, stats });
 			} catch (err) {
