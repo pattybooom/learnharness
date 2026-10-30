@@ -59,12 +59,16 @@ export function updateStatusText(state: UpdateState | null): string | null {
  * to a shell with an available updater. Opening this row never checks. */
 export function UpdateSettings({
 	autoUpdate,
+	soundEffects,
 	onAutoUpdateChange,
+	onSoundEffectsChange,
 	version = APP_VERSION,
 	homepage = HOMEPAGE,
 }: {
 	autoUpdate: boolean;
+	soundEffects?: boolean;
 	onAutoUpdateChange: (on: boolean) => void;
+	onSoundEffectsChange?: (on: boolean) => void;
 	version?: string;
 	homepage?: string;
 }) {
@@ -83,6 +87,9 @@ export function UpdateSettings({
 
 	return (
 		<>
+			<SettingsRow label="Sound effects" hint="Short cues for chat, quiz answers, and lesson progress." testid="row-sound-effects">
+				<Toggle checked={soundEffects ?? true} label="sound effects" onChange={onSoundEffectsChange ?? (() => {})} />
+			</SettingsRow>
 			<SettingsRow
 				label={`Version ${version || "unknown"}`}
 				testid="row-version"

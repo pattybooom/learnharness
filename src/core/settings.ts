@@ -328,6 +328,8 @@ export const ROLE_SLOT: Readonly<Record<ModelRole, ModelSlotName>> = {
 export interface GeneralSettings {
 	/** Automatic startup/24h update checks (default ON). Manual checks bypass this. */
 	autoUpdate?: boolean;
+	/** Short synthesized cues for meaningful chat and lesson events (default ON). */
+	soundEffects?: boolean;
 }
 
 /** One app-wide dictation preference, shared by every composer. */
@@ -502,7 +504,7 @@ export interface FactorySettings {
 
 export const FACTORY_SETTINGS: FactorySettings = {
 	version: CURRENT_SETTINGS_VERSION,
-	general: { autoUpdate: true },
+	general: { autoUpdate: true, soundEffects: true },
 	dictation: { language: "en" },
 	appearance: {
 		mode: "dark",
@@ -548,6 +550,8 @@ function sanitizeGeneral(raw: Record<string, unknown>): GeneralSettings {
 	const out: GeneralSettings = {};
 	const autoUpdate = boolOrDrop(raw.autoUpdate);
 	if (autoUpdate !== undefined) out.autoUpdate = autoUpdate;
+	const soundEffects = boolOrDrop(raw.soundEffects);
+	if (soundEffects !== undefined) out.soundEffects = soundEffects;
 	return out;
 }
 

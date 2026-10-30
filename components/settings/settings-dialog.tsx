@@ -52,6 +52,7 @@ import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
 import { KeyboardSection } from "./keyboard-section.tsx";
 import { ChatGPTUIProvider } from "./chatgpt-connection.tsx";
 import { NativeSubscriptionUIProvider } from "./subscription-connections.tsx";
+import { SoundEffectsProvider, useSoundEffects } from "@/components/sound-effects";
 
 /** Owner (2026-09-20): hints earn their place — mechanics-explaining
  *  prose is out; only the keyboard note stays (storage location is a
@@ -91,12 +92,12 @@ export function SettingsDialogProvider({
 	}, []);
 	useEffect(() => window.lh?.onOpenSettings?.((section) => open(section)), [open]);
 	return (
-		<ChatGPTUIProvider><NativeSubscriptionUIProvider><DialogContext.Provider value={{ open }}>
+		<SoundEffectsProvider><ChatGPTUIProvider><NativeSubscriptionUIProvider><DialogContext.Provider value={{ open }}>
 			{children}
 			{show && (
 				<SettingsDialog onClose={() => setShow(false)} initialSection={landOn} initialRow={landOnRow} />
 			)}
-		</DialogContext.Provider></NativeSubscriptionUIProvider></ChatGPTUIProvider>
+		</DialogContext.Provider></NativeSubscriptionUIProvider></ChatGPTUIProvider></SoundEffectsProvider>
 	);
 }
 
@@ -143,6 +144,7 @@ export function SettingsDialogBody({
 	initialRow?: string | null;
 }) {
 	const { onAppearanceChange } = useAppearance();
+	const { setEnabled: setSoundEffectsEnabled } = useSoundEffects();
 	const [record, setRecord] = useState<UserSettings | null | undefined>(
 		undefined,
 	);
@@ -254,11 +256,15 @@ export function SettingsDialogBody({
 				(prev) =>
 					stored ?? ({ ...(prev ?? {}), [section]: body }) as UserSettings,
 			);
+			if (section === "general") {
+				const general = (stored?.general ?? body) as { soundEffects?: boolean };
+				setSoundEffectsEnabled(general.soundEffects ?? true);
+			}
 			notifySettingsSaved(section);
 			if (section === "appearance")
 				onAppearanceChange(body as AppearanceSettings);
 		},
-		[onAppearanceChange],
+		[onAppearanceChange, setSoundEffectsEnabled],
 	);
 
 	return (
@@ -362,8 +368,12 @@ export function SettingsDialogBody({
 								>
 									<UpdateSettings
 										autoUpdate={record.general?.autoUpdate ?? true}
+										soundEffects={record.general?.soundEffects ?? true}
 										onAutoUpdateChange={(on) =>
 											void write("general", { ...record.general, autoUpdate: on })
+										}
+										onSoundEffectsChange={(on) =>
+											void write("general", { ...record.general, soundEffects: on })
 										}
 									/>
 								</SettingsSection>

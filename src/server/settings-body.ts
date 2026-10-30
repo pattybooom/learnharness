@@ -89,6 +89,12 @@ export function parseGeneralSettingsBody(body: unknown): SettingsBodyResult<Gene
 		}
 		settings.autoUpdate = raw.autoUpdate;
 	}
+	if (raw.soundEffects !== undefined) {
+		if (typeof raw.soundEffects !== "boolean") {
+			return { ok: false, error: "soundEffects must be a boolean" };
+		}
+		settings.soundEffects = raw.soundEffects;
+	}
 	return { ok: true, settings };
 }
 

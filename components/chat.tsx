@@ -84,6 +84,7 @@ import {
 } from "@/src/core";
 import { ReadingThinkingField } from "@/components/reading-thinking";
 import { currentUserThinkingOpen, setAllUserThinkingOpen } from "@/components/thinking-block";
+import { useSoundEffects } from "@/components/sound-effects";
 
 /** One width for everything: transcript, cards, and the bottom blob share this column. */
 /**
@@ -244,6 +245,7 @@ export function Chat({
 	 *  only decides whether the pill rides the composer. */
 	initialConfigured?: boolean;
 }) {
+	const { play: playSoundEffect } = useSoundEffects();
 	// Reattach plumbing (background-turn runner wave): the hook holds the
 	// settled terminal's callback — a stable ref assigned below, once
 	// syncFromServer exists (refs, not closures: no stale capture).
@@ -466,6 +468,19 @@ export function Chat({
 	const busy = localStream || turnInFlight;
 	const busyRef = useRef(busy);
 	busyRef.current = busy;
+	const wasBusyForSoundRef = useRef(busy);
+	useEffect(() => {
+		const wasBusy = wasBusyForSoundRef.current;
+		wasBusyForSoundRef.current = busy;
+		if (wasBusy && !busy && status === "ready") playSoundEffect("turn-finished");
+	}, [busy, status, playSoundEffect]);
+	const phaseForSound = phaseAt3(messages);
+	const previousPhaseForSoundRef = useRef(phaseForSound);
+	useEffect(() => {
+		const previous = previousPhaseForSoundRef.current;
+		previousPhaseForSoundRef.current = phaseForSound;
+		if (previous !== phaseForSound) playSoundEffect("lesson-milestone");
+	}, [phaseForSound, playSoundEffect]);
 	// The attach handoff (stream-reattach wave): the moment a resumed
 	// stream takes over the rendering — the SDK left "ready", so
 	// submitted/streaming means chunks are flowing — localStream covers
@@ -498,9 +513,9 @@ export function Chat({
 		(text: string) => {
 			const problem = activeProblemRef.current;
 			if (!problem) return;
-			void send({ type: "thinking", problemCallId: problem.toolCallId, text });
+			void send({ type: "thinking", problemCallId: problem.toolCallId, text }, () => playSoundEffect("message-sent"));
 		},
-		[send],
+		[send, playSoundEffect],
 	);
 
 	// Teach-phase check (W5, vision §2): a pending QUIZ that lands once a
@@ -595,6 +610,7 @@ export function Chat({
 		draftRef.current = prompt; // The existing 503 flow must restore it too.
 		applyText("");
 		void send({ type: "text", text: prompt }, () => {
+			playSoundEffect("message-sent");
 			clearOpeningPrompt(chatId);
 			openingDraftRef.current = null;
 			if (draftRef.current === prompt) draftRef.current = null;
@@ -603,7 +619,7 @@ export function Chat({
 				applyText(prompt);
 			}
 		});
-	}, [chatId, send, applyText]);
+	}, [chatId, send, applyText, playSoundEffect]);
 
 	const sentInitial = useRef(false);
 	useEffect(() => {
@@ -1222,7 +1238,7 @@ export function Chat({
 		}
 		draftRef.current = t; // the refusal flow's preserve-and-replay seam
 		applyText("");
-		void send({ type: "text", text: t });
+		void send({ type: "text", text: t }, () => playSoundEffect("message-sent"));
 	};
 
 	/* STEER VS SEND (owner arc 2026-10-03): a send while a turn runs steers
@@ -1754,6 +1770,9 @@ export function Chat({
 						const reading = readingThinkingRef.current.trim() || undefined;
 						// The pending-id effect clears this only when the question
 						// actually leaves. An offline preflight keeps the draft visible.
+						if (!output.dismissed && output.kind === "quiz") {
+							playSoundEffect(output.correct ? "quiz-correct" : "quiz-incorrect");
+						}
 						submitAnswer(pending.tool, pending.toolCallId, reading ? { ...output, readingThinking: reading } : output, pending.key);
 					}}
 				/>
